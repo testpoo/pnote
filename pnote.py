@@ -695,7 +695,10 @@ class Application(Application_ui):
 
     # 左侧栏节点选择
     def node_selected(self, event=None):
-        current = self.leftTreeview.selection()[0]
+        if self.leftTreeview.selection() == ():
+            current = 0
+        else:
+            current = self.leftTreeview.selection()[0]
         if current != "0":
             self.normal_button()
             id = self.leftTreeview.item(current)['values'][0]
@@ -733,6 +736,11 @@ class Application(Application_ui):
         else:
             self.editText.delete(1.0, END)
             self.disabled_button()
+            if get_config("db","pnotedb") != 0:
+                dbname = get_config("db","pnotedb").split('/')[-1][:-3]
+                self.note.title(PNOTE026 + " @ " + dbname + " - " + PNOTE013)
+            else:
+                self.note.title(PNOTE026 + " - " + PNOTE013)
     # ------------------------------------------------------------------------------
     # 窗口大小变化更新布局
     def window_resize(self, event=None):
@@ -885,7 +893,7 @@ class Application(Application_ui):
 
     def select_last_item(self, event=None):
         if get_config('db', 'pnotedb') == '0':
-            self.editText.insert(1.0, PNOTE047)
+            ShowMessage(note, self.width, self.height, PNOTE016, PNOTE047, self.font)
             self.disabled_button()
             self.rightTaskbarText.set(PNOTE033 + "：0"+", "+ datetime.now().strftime("%Y-%m-%d"))
         else:
