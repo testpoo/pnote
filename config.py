@@ -149,4 +149,3 @@ def createNewDb():
     else:
         result = "事务处理成功"
     return result
-    return result
