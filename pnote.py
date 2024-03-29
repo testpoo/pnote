@@ -57,7 +57,8 @@ class Application_ui(Frame):
         self.style.configure("Top.TButton",foreground="#000",background="#fafafa",borderwidth=0,font=(self.font,10),anchor='center',relief=FLAT)
         self.style.configure("Bottom.TButton",foreground="#4a4a5a",background="#e0e2e6",borderwidth=0,font=(self.font,10),anchor='center',relief=FLAT)
         self.style.configure("taskBottom.TLabel",foreground="#404040",background="#e0e2e6",borderwidth=0,font=(self.font,10))
-        self.style.configure("Bottom.TLabel",foreground="#404040",background="#c7cbd1",borderwidth=0,font=(self.font,10),padding=[10,0,0,0])
+        self.style.configure("LBottom.TLabel",foreground="#404040",background="#c7cbd1",borderwidth=0,font=(self.font,10),padding=[10,0,0,0])
+        self.style.configure("RBottom.TLabel",foreground="#404040",background="#c7cbd1",borderwidth=0,font=(self.font,10),padding=[0,0,10,0])
         self.style.configure("Treeview",background="#ebedef",fieldbackground="#ebedef")
         #self.style.configure('Treeview.Item', image=PhotoImage(file=os.getcwd() + '/open.png'))
         self.style.configure("Vertical.TScrollbar",background="#696f75",troughcolor="#444b53",font=(self.font,10),relief=FLAT,borderwidth=0)
@@ -164,22 +165,16 @@ class Application_ui(Frame):
         # 底部状态栏
         self.bottomFrame = Frame(self.note,style="Bottom.TFrame")
         self.leftTaskbarText = StringVar()
-        self.leftTaskbarLabel = Label(self.bottomFrame,textvariable=self.leftTaskbarText,style="Bottom.TLabel")
+        self.leftTaskbarLabel = Label(self.bottomFrame,textvariable=self.leftTaskbarText,anchor='w',style="LBottom.TLabel")
         self.leftTaskbarText.set(PNOTE036 +" 1, " + PNOTE038 +" 1")
         self.rightTaskbarText = StringVar()
-        self.rightTaskbarLabel = Label(self.bottomFrame,textvariable=self.rightTaskbarText,style="Bottom.TLabel")
-
-        # 插入顶级目录
-        self.select_last_item()
+        self.rightTaskbarLabel = Label(self.bottomFrame,textvariable=self.rightTaskbarText,anchor='e',style="RBottom.TLabel")
 
         # 创建树右键菜单
         self.rightClickMenuTreeview = Menu(self.leftTreeview, tearoff=False)
         self.rightClickMenuTreeview.add_command(label=PNOTE021, command=self.add_item)
         self.rightClickMenuTreeview.add_command(label=PNOTE059, command=self.delete_item)
         self.rightClickMenuTreeview.add_command(label=PNOTE030, command=self.rename_item)
- 
-        # 绑定树右键点击事件到右键菜单
-        self.leftTreeview.bind("<Button-3>", self.on_treeview_right_click)
 
         # 创建文本右键菜单
         self.rightClickEditText = Menu(self.editText, tearoff=False)
@@ -197,11 +192,17 @@ class Application_ui(Frame):
         self.rightClickEditText.add_separator()
         self.rightClickEditText.add_command(label=PNOTE044,command = self.insert_picture)
  
+        # 插入顶级目录
+        self.select_last_item()
+
         # 绑定右键点击事件到右键菜单
         self.editText.bind("<Button-3>", self.on_text_right_click)
 
         # 点击树
         self.leftTreeview.bind("<<TreeviewSelect>>", self.node_selected)
+
+        # 绑定树右键点击事件到右键菜单
+        self.leftTreeview.bind("<Button-3>", self.on_treeview_right_click)
 
         # 窗口大小变化
         self.note.bind('<Configure>',self.window_resize)
@@ -226,37 +227,13 @@ class Application_ui(Frame):
         self.note.bind("<Control-O>", self.open_db)
         self.note.bind("<Control-o>", self.open_db)
 
-        # 保存文本
-        self.note.bind("<Control-S>", self.save_content)
-        self.note.bind("<Control-s>", self.save_content)
-
-        # 备份数据库
-        self.note.bind("<Control-Alt-B>", self.backup_db)
-        self.note.bind("<Control-Alt-b>", self.backup_db)
-
         # 撤销
         self.editText.unbind_class("Text", "<Control-Z>")
         self.editText.unbind_class("Text", "<Control-z>")
-        self.editText.bind_class("Text", "<Control-Z>", self.undo)
-        self.editText.bind_class("Text", "<Control-z>", self.undo)
 
         # 重做
         self.editText.unbind_class("Text", "<Control-Y>")
         self.editText.unbind_class("Text", "<Control-y>")
-        self.editText.bind_class("Text", "<Control-Y>", self.redo)
-        self.editText.bind_class("Text", "<Control-y>", self.redo)
-
-        # 跳转行
-        self.note.bind("<Control-G>", self.goto_line)
-        self.note.bind("<Control-g>", self.goto_line)
-
-        # 查文字
-        self.note.bind("<Control-F>", self.find_word)
-        self.note.bind("<Control-f>", self.find_word)
-
-        # 替换文字
-        self.note.bind("<Control-H>", self.replace_word)
-        self.note.bind("<Control-h>", self.replace_word)
 
 #**实现具体的事件处理回调函数****
 class Application(Application_ui):
@@ -271,8 +248,12 @@ class Application(Application_ui):
         self.editText.config(state=DISABLED)
         self.fileMenu.entryconfig(PNOTE015, state=DISABLED)
         self.fileMenu.entryconfig(PNOTE018, state=DISABLED)
+        self.layoutMenu.entryconfig(PNOTE048, state=DISABLED)
+        self.layoutMenu.entryconfig(PNOTE010, state=DISABLED)
         for menu in [PNOTE044,PNOTE017,PNOTE058,PNOTE011,PNOTE006,PNOTE054,PNOTE014,PNOTE053,PNOTE028,PNOTE027,PNOTE043]:
             self.editMenu.entryconfig(menu, state=DISABLED)
+        for menu in [PNOTE006,PNOTE054,PNOTE014,PNOTE053,PNOTE028,PNOTE027,PNOTE043,PNOTE048,PNOTE044]:
+            self.rightClickEditText.entryconfig(menu, state=DISABLED)
         for button in self.buttons:
             if self.buttons.index(button) >= 2:
                 button.config(state=DISABLED)
@@ -281,10 +262,43 @@ class Application(Application_ui):
     def normal_button(self, event=None):
         self.editText.config(state=NORMAL)
         self.fileMenu.entryconfig(PNOTE015, state=NORMAL)
+        self.fileMenu.entryconfig(PNOTE018, state=NORMAL)
+        self.layoutMenu.entryconfig(PNOTE048, state=NORMAL)
+        self.layoutMenu.entryconfig(PNOTE010, state=NORMAL)
         for menu in [PNOTE044,PNOTE017,PNOTE058,PNOTE011,PNOTE006,PNOTE054,PNOTE014,PNOTE053,PNOTE028,PNOTE027,PNOTE043]:
             self.editMenu.entryconfig(menu, state=NORMAL)
+        for menu in [PNOTE006,PNOTE054,PNOTE014,PNOTE053,PNOTE028,PNOTE027,PNOTE043,PNOTE048,PNOTE044]:
+            self.rightClickEditText.entryconfig(menu, state=NORMAL)
         for button in self.buttons:
             button.config(state=NORMAL)
+
+        # 保存文本
+        self.note.bind("<Control-S>", self.save_content)
+        self.note.bind("<Control-s>", self.save_content)
+
+        # 备份数据库
+        self.note.bind("<Control-Alt-B>", self.backup_db)
+        self.note.bind("<Control-Alt-b>", self.backup_db)
+
+        # 跳转行
+        self.note.bind("<Control-G>", self.goto_line)
+        self.note.bind("<Control-g>", self.goto_line)
+
+        # 查文字
+        self.note.bind("<Control-F>", self.find_word)
+        self.note.bind("<Control-f>", self.find_word)
+
+        # 替换文字
+        self.note.bind("<Control-H>", self.replace_word)
+        self.note.bind("<Control-h>", self.replace_word)
+
+        # 撤销
+        self.editText.bind_class("Text", "<Control-Z>", self.undo)
+        self.editText.bind_class("Text", "<Control-z>", self.undo)
+
+        # 重做
+        self.editText.bind_class("Text", "<Control-Y>", self.redo)
+        self.editText.bind_class("Text", "<Control-y>", self.redo)
 
     # 关闭工具栏
     def closed_tool_frame(self, event=None):
@@ -300,11 +314,11 @@ class Application(Application_ui):
             save_config('db', 'pnotedb', db_path)
             with open(db_path,'w') as f:
                 createNewDb()
+            addItem(-1, 0, PNOTE026)
             self.refresh_treeview()
             self.leftTreeview.selection_set('0')
             self.editText.delete(1.0, END)
             self.rightTaskbarText.set(PNOTE033 + "："+str(queryItems())+", "+ datetime.now().strftime("%Y-%m-%d"))
-            self.disabled_button()
             dbname = get_config("db","pnotedb").split('/')[-1][:-3]
             self.note.title(PNOTE026 + " @ " + dbname + " - " + PNOTE013)
 
@@ -318,7 +332,6 @@ class Application(Application_ui):
             self.leftTreeview.selection_set('0')
             self.editText.delete(1.0, END)
             self.rightTaskbarText.set(PNOTE033 + "："+str(queryItems())+", "+ datetime.now().strftime("%Y-%m-%d"))
-            self.disabled_button()
             dbname = get_config("db","pnotedb").split('/')[-1][:-3]
             self.note.title(PNOTE026 + " @ " + dbname + " - " + PNOTE013)
 
@@ -682,8 +695,9 @@ class Application(Application_ui):
         self.folder_image = PhotoImage(data=image_folder)
         self.file_image = PhotoImage(data=image_file)
         self.file_save = PhotoImage(data=image_disk)
-        self.leftTreeview_first = self.leftTreeview.insert("", 'end',iid='0', values='', text=PNOTE026, open=False,image=self.file_save)
-        self.insert_child_items('0',self.leftTreeview_first)
+        item = queryItem(-1)[0]
+        self.leftTreeview_first = self.leftTreeview.insert("", 'end',iid=item[1], values=item[0], text=item[2], open=False,image=self.file_save)
+        self.insert_child_items(item[1],self.leftTreeview_first)
 
     # 左侧栏插入子元素
     def insert_child_items(self, pid, parent_node, event=None):
@@ -691,23 +705,20 @@ class Application(Application_ui):
             items = queryItem(pid)
             for item in items:
                 if queryItem(item[0]) != []:
-                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=" "+item[2],image=self.folder_image)
+                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=item[2],image=self.folder_image)
                     self.insert_child_items(item[0],self.leftTreeview.get_children(parent_node)[-1])
                 else:
-                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=" "+item[2],image=self.file_image)
+                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=item[2],image=self.file_image)
         except Exception as e:
             print(e)
 
     # 左侧栏节点选择
     def node_selected(self, delete=False, event=None):
-        if self.leftTreeview.selection() == ():
-            current = 0
-        else:
-            if self.prev_item != '' and delete != True:
-                self.save_prev_content(self.prev_item)
-            current = self.leftTreeview.selection()[0]
+        self.normal_button()
+        if self.prev_item != '' and delete != True:
+            self.save_prev_content(self.prev_item)
+        current = self.leftTreeview.selection()[0]
         if current != "0":
-            self.normal_button()
             id = self.leftTreeview.item(current)['values'][0]
             if get_config("db","pnotedb") != 0:
                 dbname = get_config("db","pnotedb").split('/')[-1][:-3]
@@ -741,7 +752,6 @@ class Application(Application_ui):
             self.editText.edit_reset()
         else:
             self.editText.delete(1.0, END)
-            self.disabled_button()
             if get_config("db","pnotedb") != 0:
                 dbname = get_config("db","pnotedb").split('/')[-1][:-3]
                 self.note.title(PNOTE026 + " @ " + dbname + " - " + PNOTE013)
@@ -759,8 +769,8 @@ class Application(Application_ui):
                 self.bottomFrame.place(x=0,y=self.height-30,height=30,width=self.width)
                 self.panedWindow.place(x=0,y=30,height=self.height-60,width=self.width-6)
                 self.editTextVbar.place(x=self.width-6,y=30,height=self.height-60,width=6)
-                self.leftTaskbarLabel.place(x=0,y=0,height=30,width=200)
-                self.rightTaskbarLabel.place(x=self.width-170,y=0,height=30,width=170)
+                self.leftTaskbarLabel.place(x=0,y=0,height=30,width=self.width/2)
+                self.rightTaskbarLabel.place(x=self.width/2,y=0,height=30,width=self.width/2)
 
                 if self.toolLabel.cget("text") in [PNOTE042,PNOTE010,PNOTE011]:
                     self.toolFrame.place(x=0,y=self.height-60,height=30,width=self.width)
@@ -849,32 +859,33 @@ class Application(Application_ui):
                 self.rightTaskbarText.set(PNOTE033 + "："+str(queryItems())+", "+ datetime.now().strftime("%Y-%m-%d"))
             else:
                 ShowMessage(note, self.width, self.height, PNOTE016, PNOTE009, self.font)
+        else:
+            ShowMessage(note, self.width, self.height, PNOTE016, PNOTE063, self.font)
 
     # 重命名当前项
     def rename_item(self, event=None):
         current = self.leftTreeview.selection()[0]
-        if current != '0':
-            id = self.leftTreeview.item(current)['values'][0]
-            old_name = self.leftTreeview.item(current)['text'].strip()
-            self.toolEntry.insert(0,old_name)
-            self.toolFrame.place(x=0,y=self.height-60,height=30,width=self.width)
-            self.toolLabel.place(x=0,y=0,height=30,width=100)
-            self.toolEntry.place(x=102,y=0,height=30,width=self.width-134)
-            for control in [self.replaceWordLabel,self.replaceWordEntry,self.findNextButton,self.findPrevButton,self.findAllButton,self.replaceButton]:
-                control.place(x=0,y=0,height=0,width=0)
-            self.closeFrameButton.place(x=self.width-30,y=0,height=30,width=30)
+        id = self.leftTreeview.item(current)['values'][0]
+        old_name = self.leftTreeview.item(current)['text'].strip()
+        self.toolEntry.insert(0,old_name)
+        self.toolFrame.place(x=0,y=self.height-60,height=30,width=self.width)
+        self.toolLabel.place(x=0,y=0,height=30,width=100)
+        self.toolEntry.place(x=102,y=0,height=30,width=self.width-134)
+        for control in [self.replaceWordLabel,self.replaceWordEntry,self.findNextButton,self.findPrevButton,self.findAllButton,self.replaceButton]:
+            control.place(x=0,y=0,height=0,width=0)
+        self.closeFrameButton.place(x=self.width-30,y=0,height=30,width=30)
 
-            self.editText.tag_delete("match")
-            self.toolLabel.config(text=PNOTE042)
-            self.toolEntry.delete(0, END)  # 清空文本框
-            new_name = self.leftTreeview.item(current)['text'].strip()
-            self.toolEntry.insert(0, new_name)  # 设置新文本
+        self.editText.tag_delete("match")
+        self.toolLabel.config(text=PNOTE042)
+        self.toolEntry.delete(0, END)  # 清空文本框
+        new_name = self.leftTreeview.item(current)['text'].strip()
+        self.toolEntry.insert(0, new_name)  # 设置新文本
 
-            self.panedWindow.place(x=0,y=30,height=self.height-90,width=self.width-6)
-            self.editTextVbar.place(x=self.width-6,y=30,height=self.height-90,width=6)
-            self.toolEntry.focus()
+        self.panedWindow.place(x=0,y=30,height=self.height-90,width=self.width-6)
+        self.editTextVbar.place(x=self.width-6,y=30,height=self.height-90,width=6)
+        self.toolEntry.focus()
 
-            self.toolEntry.bind('<Return>',self.rename_item_to_db)
+        self.toolEntry.bind('<Return>',self.rename_item_to_db)
 
     def rename_item_to_db(self, event=None):
         current = self.leftTreeview.selection()[0]
@@ -934,8 +945,8 @@ class Application(Application_ui):
     def select_last_item(self, event=None):
         if get_config('db', 'pnotedb') == '0':
             ShowMessage(note, self.width, self.height, PNOTE016, PNOTE047, self.font)
-            self.disabled_button()
             self.rightTaskbarText.set(PNOTE033 + "：0"+", "+ datetime.now().strftime("%Y-%m-%d"))
+            self.disabled_button()
         else:
             self.query_zero()
             current = get_config('config', 'lastitem')
