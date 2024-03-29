@@ -3,7 +3,6 @@
 
 from tkinter import *
 from tkinter.ttk import *
-from tkinter.messagebox import *
 from tkinter.filedialog import *
 import os,shutil,sys,webbrowser
 from config import *
@@ -12,9 +11,10 @@ from tooltip import *
 from PIL import ImageTk, Image
 from io import BytesIO
 from functools import partial
+from images import *
 
 if not os.path.exists(os.getcwd() + '/' + config_file):
-    with open(os.getcwd() + '/' + config_file, 'w') as f:
+    with open(os.getcwd() + '/' + config_file, 'w',encoding="utf-8") as f:
         f.write("[config]\nlastitem=0\n\n[db]\npnotedb=0\n\n[font]\nfont=Console\n\n[language]\nlanguage = Simplified Chinese")
 
 language = get_config('language', 'language')
@@ -44,9 +44,10 @@ class Application_ui(Frame):
         screenheight = note.winfo_screenheight()
         geometry = '%dx%d+%d+%d' % (self.width, self.height, (screenwidth - self.width) / 2, (screenheight - self.height) / 2)
         note.geometry(geometry)
-        note.iconphoto(False, PhotoImage(file=os.getcwd() + '/images/pnote.png'))
+        note.iconphoto(False, PhotoImage(data=image_pnote))
         note.protocol("WM_DELETE_WINDOW",self.save_last_item)
         self.font = get_config('font', 'font')
+        self.prev_item = ''
 
     def createWidgets(self):
         self.style = Style()
@@ -125,9 +126,9 @@ class Application_ui(Frame):
         # 顶部导航栏
         self.buttons = []
         self.topFrame = Frame(self.note,style="Top.TFrame")
-        topButtons = [('newdb','self.new_db',PNOTE035),('opendb','self.open_db',PNOTE057),('filesave','self.save_content',PNOTE018),('backup','self.backup_db',PNOTE015),('picture','self.insert_picture',PNOTE044),('undo','self.undo',PNOTE006),('redo','self.redo',PNOTE054),('cut','self.cut',PNOTE014),('copy','self.copy',PNOTE053),('paste','self.paste',PNOTE028),('delete','self.delete',PNOTE027)]
+        topButtons = [('image_newdb','self.new_db',PNOTE035),('image_opendb','self.open_db',PNOTE057),('image_filesave','self.save_content',PNOTE018),('image_backup','self.backup_db',PNOTE015),('image_picture','self.insert_picture',PNOTE044),('image_undo','self.undo',PNOTE006),('image_redo','self.redo',PNOTE054),('image_cut','self.cut',PNOTE014),('image_copy','self.copy',PNOTE053),('image_paste','self.paste',PNOTE028),('image_delete','self.delete',PNOTE027)]
         for topButton in topButtons:
-            self.image = PhotoImage(file=os.getcwd() + '/images/' + topButton[0] +'.png')
+            self.image = PhotoImage(data=eval(topButton[0]))
             self.topButton = Button(self.topFrame,image=self.image,command=eval(topButton[1]),style="Top.TButton")
             self.topButton.image = self.image # 这里要引用一下，否则图片会被回收不显示
             self.topButton.place(x=30*topButtons.index(topButton),y=0,height=30,width=30)
@@ -157,7 +158,7 @@ class Application_ui(Frame):
         self.findAllButton = Button(self.toolFrame, command=lambda: self.find_all(self.toolEntry, self.editText, self.leftTaskbarText),style="Bottom.TButton")
         self.replaceButton = Button(self.toolFrame, command=lambda: self.replace_next(self.toolEntry, self.replaceWordEntry, self.editText, self.leftTaskbarText,),style="Bottom.TButton")
         self.replaceAllButton = Button(self.toolFrame, command=lambda: self.replace_all(self.toolEntry, self.replaceWordEntry, self.editText, self.leftTaskbarText),style="Bottom.TButton")
-        self.clear_image = PhotoImage(file=os.getcwd() + '/images/clear.png')
+        self.clear_image = PhotoImage(data=image_clear)
         self.closeFrameButton = Button(self.toolFrame, image=self.clear_image,command=self.closed_tool_frame,style="Bottom.TButton")
 
         # 底部状态栏
@@ -200,7 +201,7 @@ class Application_ui(Frame):
         self.editText.bind("<Button-3>", self.on_text_right_click)
 
         # 点击树
-        self.leftTreeview.bind('<ButtonRelease-1>', self.node_selected)
+        self.leftTreeview.bind("<<TreeviewSelect>>", self.node_selected)
 
         # 窗口大小变化
         self.note.bind('<Configure>',self.window_resize)
@@ -213,6 +214,9 @@ class Application_ui(Frame):
 
         # 文本修改时触发
         #self.editText.bind("<<Modified>>", self.editText.image_delete)
+
+        # 双击重命名treeview名子
+        self.leftTreeview.bind("<Double-Button-1>", self.edit_cell)
 
         # 新建数据库
         self.note.bind("<Control-N>", self.new_db)
@@ -235,16 +239,12 @@ class Application_ui(Frame):
         self.editText.unbind_class("Text", "<Control-z>")
         self.editText.bind_class("Text", "<Control-Z>", self.undo)
         self.editText.bind_class("Text", "<Control-z>", self.undo)
-        #self.editText.bind("<Control-Z>", self.undo)
-        #self.editText.bind("<Control-z>", self.undo)
 
         # 重做
         self.editText.unbind_class("Text", "<Control-Y>")
         self.editText.unbind_class("Text", "<Control-y>")
         self.editText.bind_class("Text", "<Control-Y>", self.redo)
         self.editText.bind_class("Text", "<Control-y>", self.redo)
-        #self.note.bind("<Control-Y>", self.redo)
-        #self.note.bind("<Control-y>", self.redo)
 
         # 跳转行
         self.note.bind("<Control-G>", self.goto_line)
@@ -270,6 +270,7 @@ class Application(Application_ui):
     def disabled_button(self, event=None):
         self.editText.config(state=DISABLED)
         self.fileMenu.entryconfig(PNOTE015, state=DISABLED)
+        self.fileMenu.entryconfig(PNOTE018, state=DISABLED)
         for menu in [PNOTE044,PNOTE017,PNOTE058,PNOTE011,PNOTE006,PNOTE054,PNOTE014,PNOTE053,PNOTE028,PNOTE027,PNOTE043]:
             self.editMenu.entryconfig(menu, state=DISABLED)
         for button in self.buttons:
@@ -322,25 +323,29 @@ class Application(Application_ui):
             self.note.title(PNOTE026 + " @ " + dbname + " - " + PNOTE013)
 
     # 保存
-    def save_content(self, event=None):
+    def save_prev_content(self, item, event=None):
         image_lists = []
+        if self.leftTreeview.item(item)['values'] != '':
+            content = self.editText.get(1.0, END)
+            id = self.leftTreeview.item(item)['values'][0]
+            self.image_list += queryImageInfo(id)
+            updateContent(content.rstrip('\n'),id)
+            image_ids = self.editText.image_names()
+            for image_id in image_ids:
+                image_bytes = b''
+                self.editText.update_idletasks()
+                image_address = self.editText.index(image_id)
+                for image in self.image_list:
+                    if image_id == str(image[0]):
+                        image_bytes = image[2]
+                image_lists.append((image_id,image_address,image_bytes))
+            deleteImageInfo(id)
+            for image in image_lists:
+                insertImageInfo(id,image[0],image[1],image[2])
+
+    def save_content(self, event=None):
         current = self.leftTreeview.selection()[0]
-        content = self.editText.get(1.0, END)
-        id = self.leftTreeview.item(current)['values'][0]
-        self.image_list += queryImageInfo(id)
-        updateContent(content,id)
-        image_ids = self.editText.image_names()
-        for image_id in image_ids:
-            image_bytes = b''
-            self.editText.update_idletasks()
-            image_address = self.editText.index(image_id)
-            for image in self.image_list:
-                if image_id == str(image[0]):
-                    image_bytes = image[2]
-            image_lists.append((image_id,image_address,image_bytes))
-        deleteImageInfo(id)
-        for image in image_lists:
-            insertImageInfo(id,image[0],image[1],image[2])
+        self.save_prev_content(current)
 
     # 备份数据库
     def backup_db(self, event=None):
@@ -674,9 +679,9 @@ class Application(Application_ui):
     # ------------------------------------------------------------------------------
     # 插入顶级目录
     def query_zero(self, event=None):
-        self.folder_image = PhotoImage(file=os.getcwd() + '/images/folder.png')
-        self.file_image = PhotoImage(file=os.getcwd() + '/images/file.png')
-        self.file_save = PhotoImage(file=os.getcwd() + '/images/disk.png')
+        self.folder_image = PhotoImage(data=image_folder)
+        self.file_image = PhotoImage(data=image_file)
+        self.file_save = PhotoImage(data=image_disk)
         self.leftTreeview_first = self.leftTreeview.insert("", 'end',iid='0', values='', text=PNOTE026, open=False,image=self.file_save)
         self.insert_child_items('0',self.leftTreeview_first)
 
@@ -694,15 +699,16 @@ class Application(Application_ui):
             print(e)
 
     # 左侧栏节点选择
-    def node_selected(self, event=None):
+    def node_selected(self, delete=False, event=None):
         if self.leftTreeview.selection() == ():
             current = 0
         else:
+            if self.prev_item != '' and delete != True:
+                self.save_prev_content(self.prev_item)
             current = self.leftTreeview.selection()[0]
         if current != "0":
             self.normal_button()
             id = self.leftTreeview.item(current)['values'][0]
-            #name = self.leftTreeview.item(current)['text']
             if get_config("db","pnotedb") != 0:
                 dbname = get_config("db","pnotedb").split('/')[-1][:-3]
             # 获取树路径
@@ -741,6 +747,7 @@ class Application(Application_ui):
                 self.note.title(PNOTE026 + " @ " + dbname + " - " + PNOTE013)
             else:
                 self.note.title(PNOTE026 + " - " + PNOTE013)
+        self.prev_item = self.leftTreeview.selection()[0]
     # ------------------------------------------------------------------------------
     # 窗口大小变化更新布局
     def window_resize(self, event=None):
@@ -837,7 +844,7 @@ class Application(Application_ui):
                 deleteItem(id)
                 self.refresh_treeview()
                 self.leftTreeview.selection_set(parent)
-                self.node_selected()
+                self.node_selected(True)
                 self.leftTreeview.see(parent)  # 滚动Treeview使得该行可见
                 self.rightTaskbarText.set(PNOTE033 + "："+str(queryItems())+", "+ datetime.now().strftime("%Y-%m-%d"))
             else:
@@ -883,6 +890,39 @@ class Application(Application_ui):
         self.leftTreeview.see(current)  # 滚动Treeview使得该行可见
         self.node_selected()
 
+    # 双击Treeview重命名
+    def edit_cell(self, event=None):
+        current = self.leftTreeview.selection()[0]
+        id = self.leftTreeview.item(current)['values'][0]
+
+        # 获取被点击的单元格的行列号
+        row = self.leftTreeview.identify_row(event.y)
+        column = self.leftTreeview.identify_column(event.x)
+    
+        # 计算单元格的位置
+        x, y, w, h = self.leftTreeview.bbox(row, column)
+    
+        # 创建编辑窗口
+        entry = Entry(self.panedWindow)
+        entry.place(x=x, y=y, width=w, height=h)
+    
+        # 获取原始值
+        value = self.leftTreeview.item(current)['text'].strip()
+    
+        # 设置编辑窗口的初始值
+        entry.insert(0, value)
+    
+        # 绑定回车键事件
+        def apply_edit(event):
+            new_value = entry.get()
+            renameItem(new_value,id)
+            self.refresh_treeview()
+            self.leftTreeview.selection_set(current)
+            self.leftTreeview.see(current)  # 滚动Treeview使得该行可见
+            self.node_selected()
+            entry.destroy()
+    
+        entry.bind("<Return>", apply_edit)
     # ------------------------------------------------------------------------------
     # 记录最后选择的条目并在打开时跳转到该条目
     def save_last_item(self, event=None):
