@@ -4,7 +4,7 @@
 from tkinter import *
 from tkinter.ttk import *
 from tkinter.filedialog import *
-import os,shutil,sys,webbrowser
+import os,shutil,sys,webbrowser,re
 from config import *
 from ptext import *
 from tooltip import *
@@ -658,16 +658,8 @@ class Application(Application_ui):
     # 帮助------------------------------------------------------------------------------
     # 查看帮助
     def query_help(self, event=None):
-        self.style.configure("Help.TLabel",foreground="#404040",background="#EBEDEF",borderwidth=0,font=(self.font,10),padding=[8,8,8,8])
-        query_help = Toplevel(self.note,background="#EBEDEF")
-        query_help.geometry("%dx%d+%d+%d" % (300, 100, note.winfo_x() + (self.width-300)/2, note.winfo_y() + (self.height-100)/2))
-        query_help.title(PNOTE050)
-        query_help.resizable(0,0)
-        query_help.attributes("-toolwindow",2)
-        helpText = Text(query_help,font=(self.font, '11'),bg="#EBEDEF",padx=8,pady=8)
-        helpText.insert(1.0,"PNote是一个笔记本, 主要用于记笔记！")
-        helpText.pack()
-        helpText.config(state=DISABLED)
+        text = "PNote是一个笔记本, 主要用于记笔记！"
+        QueryHelp(note, self.width, self.height, PNOTE050, text, self.font)
 
     # 缺陷报告
     def issue_report(self, event=None):
@@ -679,16 +671,7 @@ class Application(Application_ui):
 
     # 关于
     def about(self, event=None):
-        self.style.configure("AboutName.TLabel",foreground="#404040",background="#EBEDEF",borderwidth=0,font=(self.font,24,"bold"))
-        self.style.configure("About.TLabel",foreground="#404040",background="#EBEDEF",borderwidth=0,font=(self.font,10),padding=[0,8,0,8])
-        about = Toplevel(self.note,background="#EBEDEF")
-        about.geometry("%dx%d+%d+%d" % (300, 100, note.winfo_x() + (self.width-300)/2, note.winfo_y() + (self.height-100)/2))
-        about.title(PNOTE002)
-        about.resizable(0,0)
-        about.attributes("-toolwindow",2)
-        Label(about, text=PNOTE013,style="AboutName.TLabel").pack()
-        Label(about, text="Copyright © 2024 "+PNOTE046,style="About.TLabel").pack()
-        Label(about, text=PNOTE008+"：0.01",style="About.TLabel").pack()
+        About(note, self.width, self.height, PNOTE002, self.font, PNOTE013, PNOTE046, PNOTE008)
     # ------------------------------------------------------------------------------
     # 插入顶级目录
     def query_zero(self, event=None):
@@ -696,7 +679,7 @@ class Application(Application_ui):
         self.file_image = PhotoImage(data=image_file)
         self.file_save = PhotoImage(data=image_disk)
         item = queryItem(-1)[0]
-        self.leftTreeview_first = self.leftTreeview.insert("", 'end',iid=item[1], values=item[0], text=item[2], open=False,image=self.file_save)
+        self.leftTreeview_first = self.leftTreeview.insert("", 'end',iid=item[1], values=item[0], text=" "+item[2], open=False,image=self.file_save)
         self.insert_child_items(item[1],self.leftTreeview_first)
 
     # 左侧栏插入子元素
@@ -705,10 +688,10 @@ class Application(Application_ui):
             items = queryItem(pid)
             for item in items:
                 if queryItem(item[0]) != []:
-                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=item[2],image=self.folder_image)
+                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=" "+item[2],image=self.folder_image)
                     self.insert_child_items(item[0],self.leftTreeview.get_children(parent_node)[-1])
                 else:
-                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=item[2],image=self.file_image)
+                    self.leftTreeview.insert(parent_node, 'end',iid=item[1], values=item[0], text=" "+item[2],image=self.file_image)
         except Exception as e:
             print(e)
 
@@ -758,6 +741,7 @@ class Application(Application_ui):
             else:
                 self.note.title(PNOTE026 + " - " + PNOTE013)
         self.prev_item = self.leftTreeview.selection()[0]
+        self.cursor_move()
     # ------------------------------------------------------------------------------
     # 窗口大小变化更新布局
     def window_resize(self, event=None):
@@ -808,6 +792,7 @@ class Application(Application_ui):
             self.rightTaskbarText.set(PNOTE033 + "：0"+", "+ datetime.now().strftime("%Y-%m-%d"))
         else:
             self.rightTaskbarText.set(PNOTE033 + "："+str(queryItems())+", "+ datetime.now().strftime("%Y-%m-%d"))
+        self.highlight_keyword()
 
     # ------------------------------------------------------------------------------
     # 文本右键点击事件
@@ -903,6 +888,11 @@ class Application(Application_ui):
 
     # 双击Treeview重命名
     def edit_cell(self, event=None):
+        # 销毁存在的Entry
+        for widget in self.panedWindow.winfo_children():
+            if isinstance(widget, Entry):
+                widget.destroy()
+
         current = self.leftTreeview.selection()[0]
         id = self.leftTreeview.item(current)['values'][0]
 
@@ -915,7 +905,7 @@ class Application(Application_ui):
     
         # 创建编辑窗口
         entry = Entry(self.panedWindow)
-        entry.place(x=x, y=y, width=w, height=h)
+        entry.place(x=x+35, y=y, width=w-35, height=h)
     
         # 获取原始值
         value = self.leftTreeview.item(current)['text'].strip()
@@ -954,6 +944,32 @@ class Application(Application_ui):
             self.leftTreeview.see(current)  # 滚动Treeview使得该行可见
             self.node_selected()
             self.rightTaskbarText.set(PNOTE033 + "："+str(queryItems())+", "+ datetime.now().strftime("%Y-%m-%d"))
+
+    # 高亮显示
+    def highlight_keyword(self, event=None):
+        keyword_num = [str(num) for num in range(0,10)]
+        url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+        keyword_url = [url for url in url_pattern.findall(self.editText.get(1.0, "end"))]
+        keywords = keyword_num + keyword_url
+        for keyword in keywords:
+            index = "1.0"
+            while True:
+                # 搜索关键词在文本中的位置
+                index = self.editText.search(keyword, index, stopindex=END)
+                if index:
+                    # 高亮显示匹配到的文本
+                    end_index = f"{index}+{len(keyword)}c"
+                    if keyword in keyword_num:
+                        self.editText.tag_add("highlightnum", index, end_index)
+                        self.editText.tag_config("highlightnum", foreground="#c71585", font=('',12,"bold"))
+                    elif keyword in keyword_url:
+                        self.editText.tag_add("highlightother", index, end_index)
+                        self.editText.tag_config("highlightother", foreground="#80cdff", font=('',12,"bold"), underline=True)
+
+                    # 更新搜索的起始位置
+                    index = end_index
+                else:
+                    break
 
 if __name__ == "__main__":
     note = Tk()
