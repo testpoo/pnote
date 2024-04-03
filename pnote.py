@@ -6,8 +6,7 @@ from tkinter.ttk import *
 from tkinter.filedialog import *
 import os,shutil,sys,webbrowser,re
 from config import *
-from ptext import *
-from tooltip import *
+from extend import *
 from PIL import ImageTk, Image
 from io import BytesIO
 from functools import partial
@@ -235,6 +234,10 @@ class Application_ui(Frame):
         self.editText.unbind_class("Text", "<Control-Y>")
         self.editText.unbind_class("Text", "<Control-y>")
 
+        # 退出
+        self.note.bind("<Control-Q>", self.exit)
+        self.note.bind("<Control-q>", self.exit)
+
 #**实现具体的事件处理回调函数****
 class Application(Application_ui):
     def __init__(self, master=None):
@@ -370,7 +373,6 @@ class Application(Application_ui):
     # 退出
     def exit(self, event=None):
         self.save_last_item()
-        note.destroy()
     # 编辑------------------------------------------------------------------------------
     # 插入图片
     def insert_picture(self, event=None):
@@ -658,8 +660,7 @@ class Application(Application_ui):
     # 帮助------------------------------------------------------------------------------
     # 查看帮助
     def query_help(self, event=None):
-        text = "PNote是一个笔记本, 主要用于记笔记！"
-        QueryHelp(note, self.width, self.height, PNOTE050, text, self.font)
+        QueryHelp(note, self.width, self.height, PNOTE050, PNOTE064, self.font)
 
     # 缺陷报告
     def issue_report(self, event=None):
@@ -742,6 +743,8 @@ class Application(Application_ui):
                 self.note.title(PNOTE026 + " - " + PNOTE013)
         self.prev_item = self.leftTreeview.selection()[0]
         self.cursor_move()
+        # 销毁存在的Entry
+        self.destroy_entry()
     # ------------------------------------------------------------------------------
     # 窗口大小变化更新布局
     def window_resize(self, event=None):
@@ -889,9 +892,7 @@ class Application(Application_ui):
     # 双击Treeview重命名
     def edit_cell(self, event=None):
         # 销毁存在的Entry
-        for widget in self.panedWindow.winfo_children():
-            if isinstance(widget, Entry):
-                widget.destroy()
+        self.destroy_entry()
 
         current = self.leftTreeview.selection()[0]
         id = self.leftTreeview.item(current)['values'][0]
@@ -924,6 +925,12 @@ class Application(Application_ui):
             entry.destroy()
     
         entry.bind("<Return>", apply_edit)
+
+    # 销毁存在的Entry
+    def destroy_entry(self, event=None):
+        for widget in self.panedWindow.winfo_children():
+            if isinstance(widget, Entry):
+                widget.destroy()
     # ------------------------------------------------------------------------------
     # 记录最后选择的条目并在打开时跳转到该条目
     def save_last_item(self, event=None):
